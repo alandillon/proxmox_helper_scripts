@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-set -Ee
-export SSH_CLIENT="${SSH_CLIENT:-}"
+set -Ee -o pipefail
+
+export SSH_CLIENT="${SSH_CLIENT-}"
+export SSH_TTY="${SSH_TTY-}"
+export TERM="${TERM:-xterm}"
 
 source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/build.func)
 
-set -u -o pipefail
-
 APP="FoundryVTT"
-var_tags="gaming;vtt;foundry"
+var_tags="${var_tags:-gaming;vtt;foundry}"
 var_cpu="${var_cpu:-2}"
 var_ram="${var_ram:-2048}"
 var_disk="${var_disk:-12}"
@@ -20,26 +21,38 @@ variables
 color
 catch_errors
 
-function update_script() {
+update_script() {
   header_info "$APP"
-  check_container_storage
-  check_container_resources
-  if ! pct exec "$CTID" -- test -f /etc/systemd/system/foundryvtt.service; then
-    msg_error "FoundryVTT is not installed in CT $CTID"
+  if [[ -z "${CTID:-}" ]]; then
+    msg_error "No CTID selected"
     exit 1
   fi
+
+  if ! pct status "$CTID" >/dev/null 2>&1; then
+    msg_error "Container $CTID not found"
+    exit 1
+  fi
+
   msg_info "Re-running FoundryVTT installer in CT $CTID"
-  pct exec "$CTID" -- bash -lc "curl -fsSL https://raw.githubusercontent.com/alandillon/proxmox-helper-scripts/main/install/foundryvtt-install.sh | bash"
+  pct start "$CTID" >/dev/null 2>&1 || true
+  pct exec "$CTID" -- bash -lc 'bash -c "$(curl -fsSL https://raw.githubusercontent.com/alandillon/proxmox-helper-scripts/main/install/foundryvtt-install.sh)"'
   msg_ok "Updated Successfully"
-  exit
+
+  IP="$(pct exec "$CTID" -- hostname -I | awk "{print \$1}")"
+  if [[ -n "${IP}" ]]; then
+    echo " FoundryVTT should be reachable at: http://${IP}:30000"
+  fi
+  exit 0
 }
 
 start
 build_container
 
 msg_info "Running FoundryVTT installer inside the container"
-pct exec "$CTID" -- bash -lc "curl -fsSL https://raw.githubusercontent.com/alandillon/proxmox-helper-scripts/main/install/foundryvtt-install.sh | bash"
+pct exec "$CTID" -- bash -lc 'bash -c "$(curl -fsSL https://raw.githubusercontent.com/alandillon/proxmox-helper-scripts/main/install/foundryvtt-install.sh)"'
 msg_ok "Completed Successfully"
 
-IP=$(pct exec "$CTID" -- hostname -I | awk '{print $1}')
-echo " ${APP} should be reachable at: http://${IP}:30000"
+IP="$(pct exec "$CTID" -- hostname -I | awk '{print $1}')"
+if [[ -n "${IP}" ]]; then
+  echo " FoundryVTT should be reachable at: http://${IP}:30000"
+fi
