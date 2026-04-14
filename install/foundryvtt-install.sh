@@ -12,8 +12,9 @@ export DEBIAN_FRONTEND=noninteractive
 apt update
 apt install -y curl wget unzip ca-certificates gnupg lsb-release iproute2
 
-if ! command -v node >/dev/null 2>&1 || ! node -v | grep -q '^v22\.'; then
-  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+if ! command -v node >/dev/null 2>&1 || ! node -v | grep -q '^v24\.'; then
+  apt remove -y nodejs || true
+  curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
   apt install -y nodejs
 fi
 
