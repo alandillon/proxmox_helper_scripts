@@ -32,7 +32,6 @@ ExecStart=-/sbin/agetty --autologin root --noclear --keep-baud tty1 115200,38400
 EOF
 
 systemctl daemon-reload
-systemctl enable container-getty@1.service >/dev/null 2>&1 || true
 systemctl restart container-getty@1.service || true
 
 if [[ ! -f "$APP_DIR/main.js" ]]; then
@@ -74,8 +73,9 @@ WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-systemctl enable ${SERVICE}
-systemctl restart ${SERVICE}
+systemctl enable "$SERVICE"
+systemctl restart "$SERVICE"
 
-sleep 3
-systemctl --no-pager --full status ${SER
+sleep 2
+systemctl --no-pager --full status "$SERVICE" || true
+ss -ltnp | grep ":${PORT}" || true
