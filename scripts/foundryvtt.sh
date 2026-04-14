@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-set -Eeuo pipefail
+set -Ee
+export SSH_CLIENT="${SSH_CLIENT:-}"
 
 source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/build.func)
+
+set -u -o pipefail
 
 APP="FoundryVTT"
 var_tags="gaming;vtt;foundry"
