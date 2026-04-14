@@ -25,7 +25,7 @@ mkdir -p "$APP_DIR" "$DATA_DIR"
 chown -R "$APP_USER:$APP_USER" "$APP_DIR" "$DATA_DIR"
 
 mkdir -p /etc/systemd/system/container-getty@1.service.d
-cat >/etc/systemd/system/container-getty@1.service.d/override.conf <<'EOF'
+cat > /etc/systemd/system/container-getty@1.service.d/override.conf <<'EOF'
 [Service]
 ExecStart=
 ExecStart=-/sbin/agetty --autologin root --noclear --keep-baud tty1 115200,38400,9600 $TERM
@@ -50,7 +50,7 @@ if [[ ! -f "$APP_DIR/main.js" ]]; then
   exit 1
 fi
 
-cat >/etc/systemd/system/${SERVICE}.service <<EOF
+cat > /etc/systemd/system/${SERVICE}.service <<EOF
 [Unit]
 Description=Foundry Virtual Tabletop
 After=network-online.target
