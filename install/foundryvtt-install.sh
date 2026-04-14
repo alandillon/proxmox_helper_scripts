@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-APP="FoundryVTT"
 APP_USER="foundry"
 APP_DIR="/opt/foundryvtt"
 DATA_DIR="/opt/foundrydata"
@@ -25,6 +24,17 @@ fi
 mkdir -p "$APP_DIR" "$DATA_DIR"
 chown -R "$APP_USER:$APP_USER" "$APP_DIR" "$DATA_DIR"
 
+mkdir -p /etc/systemd/system/container-getty@1.service.d
+cat >/etc/systemd/system/container-getty@1.service.d/override.conf <<'EOF'
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin root --noclear --keep-baud tty1 115200,38400,9600 $TERM
+EOF
+
+systemctl daemon-reload
+systemctl enable container-getty@1.service >/dev/null 2>&1 || true
+systemctl restart container-getty@1.service || true
+
 if [[ ! -f "$APP_DIR/main.js" ]]; then
   echo "Paste your Foundry VTT Node.js timed download URL:"
   read -r -p "URL: " FOUNDRY_URL
@@ -43,10 +53,11 @@ if [[ ! -f "$APP_DIR/main.js" ]]; then
   exit 1
 fi
 
-cat > /etc/systemd/system/${SERVICE}.service <<EOF
+cat >/etc/systemd/system/${SERVICE}.service <<EOF
 [Unit]
 Description=Foundry Virtual Tabletop
-After=network.target
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
@@ -54,7 +65,7 @@ User=${APP_USER}
 Group=${APP_USER}
 WorkingDirectory=${APP_DIR}
 ExecStart=/usr/bin/node ${APP_DIR}/main.js --dataPath=${DATA_DIR} --port=${PORT}
-Restart=on-failure
+Restart=always
 RestartSec=5
 Environment=NODE_ENV=production
 
@@ -63,5 +74,8 @@ WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-systemctl enable --now "$SERVICE"
-systemctl restart "$SERVICE"
+systemctl enable ${SERVICE}
+systemctl restart ${SERVICE}
+
+sleep 3
+systemctl --no-pager --full status ${SER
